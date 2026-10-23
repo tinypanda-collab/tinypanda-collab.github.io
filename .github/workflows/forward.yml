@@ -1,0 +1,40 @@
+# Old address forwarding (repository tinypanda-collab/tinypanda-collab.github.io).
+# Every hour it rebuilds the Zenith site from the public pandalume/pandalume.github.io repository and
+# publishes only the forwarding copy: exact copies of the update feeds (so apps installed before the
+# move keep finding updates) and a "moved" page for every page. No tokens needed.
+# Settings › Pages › Source must be "GitHub Actions".
+name: forward
+on:
+  schedule:
+    - cron: "41 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: pandalume/pandalume.github.io
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/build.mjs --no-counts
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-legacy
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
